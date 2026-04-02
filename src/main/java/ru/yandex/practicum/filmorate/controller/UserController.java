@@ -27,22 +27,7 @@ public class UserController {
     @PostMapping
     public User create(@RequestBody User user) {
         // проверяем выполнение необходимых условий
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            throw new ConditionsNotMetException("Электронная почта не может быть пустой и должна содержать символ \"@\"");
-        }
-        if (users.values().stream()
-                .anyMatch(curUser -> curUser.getEmail().equals(user.getEmail()))) {
-            throw new DuplicatedDataException("Этот имейл уже используется");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            throw new ConditionsNotMetException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            throw new ValidationException("Дата рождения не может быть в будущем.");
-        }
+        checkUserData(user);
         // формируем дополнительные данные
         user.setId(getNextId());
         // сохраняем новую публикацию в памяти приложения
@@ -88,5 +73,24 @@ public class UserController {
             return oldUser;
         }
         throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+    }
+
+    private void checkUserData(User user) {
+        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
+            throw new ConditionsNotMetException("Электронная почта не может быть пустой и должна содержать символ \"@\"");
+        }
+        if (users.values().stream()
+                .anyMatch(curUser -> curUser.getEmail().equals(user.getEmail()))) {
+            throw new DuplicatedDataException("Этот имейл уже используется");
+        }
+        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
+            throw new ConditionsNotMetException("Логин не может быть пустым и содержать пробелы");
+        }
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+        if (user.getBirthday().isAfter(LocalDate.now())) {
+            throw new ValidationException("Дата рождения не может быть в будущем.");
+        }
     }
 }
