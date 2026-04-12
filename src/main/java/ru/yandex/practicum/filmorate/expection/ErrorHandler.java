@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ErrorHandler {
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponse> ConditionsNotMet(final ConditionsNotMetException e) {
+    public ResponseEntity<ErrorResponse> conditionsNotMet(final ConditionsNotMetException e) {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Отсутствует значение",
                 e.getMessage()
@@ -19,7 +19,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponse> DuplicatedData(final DuplicatedDataException e) {
+    public ResponseEntity<ErrorResponse> duplicatedData(final DuplicatedDataException e) {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Дублирование значения",
                 e.getMessage()
@@ -28,7 +28,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponse> NotFound(final NotFoundException e) {
+    public ResponseEntity<ErrorResponse> notFound(final NotFoundException e) {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Значение не найдено",
                 e.getMessage()
@@ -37,7 +37,7 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ErrorResponse> Validation(final ValidationException e) {
+    public ResponseEntity<ErrorResponse> validation(final ValidationException e) {
         ErrorResponse errorResponse = new ErrorResponse(
                 "Ошибка валидации",
                 e.getMessage()
