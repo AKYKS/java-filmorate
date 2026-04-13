@@ -1,29 +1,50 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.expection.ConditionsNotMetException;
 import ru.yandex.practicum.filmorate.expection.DuplicatedDataException;
 import ru.yandex.practicum.filmorate.expection.NotFoundException;
+import ru.yandex.practicum.filmorate.expection.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class FilmService {
     private static final Logger log = LoggerFactory.getLogger(FilmService.class);
     private final InMemoryFilmStorage inMemoryFilmStorage;
     private final UserService userService;
 
-    @Autowired
-    public FilmService(InMemoryFilmStorage inMemoryFilmStorage, UserService userService) {
-        this.inMemoryFilmStorage = inMemoryFilmStorage;
-        this.userService = userService;
+    public Collection<Film> findAll() {
+        return inMemoryFilmStorage.findAll();
+    }
+
+    public Film findCurrentFilm(long id) {
+        return inMemoryFilmStorage.findCurrentFilm(id);
+    }
+
+    public Film create(Film film) {
+        checkFilmData(film);
+        return inMemoryFilmStorage.create(film);
+    }
+
+    public Film update(Film newFilm) {
+        // проверяем необходимые условия
+        if (newFilm.getId() == null) {
+            throw new ConditionsNotMetException("Id должен быть указан");
+        }
+        if (findCurrentFilm(newFilm.getId()) != null) {
+            return inMemoryFilmStorage.update(newFilm);
+        }
+
+        throw new NotFoundException("Фильм с id = " + newFilm.getId() + " не найден");
     }
 
     public Film addLikeFilm(long id, long userId) {
@@ -79,17 +100,36 @@ public class FilmService {
                 .collect(Collectors.toList());
     }
 
-    public void isPresentFilm(long id) {
+    public void clear() {
+        inMemoryFilmStorage.clear();
+    }
+
+    private void isPresentFilm(long id) {
         if (inMemoryFilmStorage.findCurrentFilm(id) == null) {
             log.warn("Фильм с таким id {} не найден", id);
-            throw new NotFoundException("Фильм с таки id не найден");
+            throw new NotFoundException("Фильм с таким id не найден");
         }
     }
 
-    public boolean isCurUserLikedFilm(long id, long userId) {
+    private boolean isCurUserLikedFilm(long id, long userId) {
         if (inMemoryFilmStorage.findCurrentFilm(id).getUserLikes().contains(userId)) {
             return true;
         }
         return false;
+    }
+
+    private void checkFilmData(Film film) {
+        if (film.getName() == null || film.getName().isBlank()) {
+            throw new ConditionsNotMetException("название не может быть пустым");
+        }
+        if (film.getDescription().length() > 200) {
+            throw new ValidationException("Максимальная длина описания — 200 символов");
+        }
+        if (film.getReleaseDate().isBefore(LocalDate.of(1895, 12, 28))) {
+            throw new ValidationException("Дата релиза — не раньше 28 декабря 1895 года");
+        }
+        if (film.getDuration() <= 0) {
+            throw new ValidationException("Продолжительность фильма должна быть положительным числом.");
+        }
     }
 }
