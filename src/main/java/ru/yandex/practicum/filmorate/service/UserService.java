@@ -99,10 +99,6 @@ public class UserService {
             }
         }
 
-        if (!userFriends.contains(id)) {
-            throw new NotFoundException("Пользователя с этим id нет в друзьях");
-        }
-
         userFriends.remove(id);
         user.setFriends(userFriends);
 
@@ -131,24 +127,18 @@ public class UserService {
         return friendIdtoList(userFriends);
     }
 
-    public List<User> getMutualFriendList(long userId, long id) {
+    public Collection<User> getMutualFriendList(long userId, long id) {
         isPresentUser(userId);
         isPresentUser(id);
 
         User user = inMemoryUserStorage.findCurrentUser(userId);
-        Set<Long> userFriends = user.getFriends();
+        User otherUser = inMemoryUserStorage.findCurrentUser(id);
 
-        User anotherUser = inMemoryUserStorage.findCurrentUser(id);
-        Set<Long> anotherUserFriends = anotherUser.getFriends();
-
-        isPresentUserFriends(userFriends);
-        isPresentUserFriends(anotherUserFriends);
-
-        Set<Long> mutualFriendIds = new HashSet<>(userFriends);
-
-        mutualFriendIds.retainAll(anotherUserFriends);
-
-        return friendIdtoList(mutualFriendIds);
+        Collection<User> commonFriends = user.getFriends().stream()
+                .filter(otherUser.getFriends()::contains)
+                .map(inMemoryUserStorage::findCurrentUser)
+                .toList();
+        return commonFriends;
     }
 
     public void clear() {

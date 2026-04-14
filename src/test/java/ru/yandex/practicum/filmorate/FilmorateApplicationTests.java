@@ -533,33 +533,6 @@ class FilmorateApplicationTests {
         assertTrue(friends.stream().anyMatch(u -> u.getId().equals(createdFriend2.getId())));
     }
 
-    @Test
-    void getMutualFriendList_NoMutualFriends_ShouldThrowNotFoundException() {
-        // Создаём пользователей без общих друзей
-        User user1 = new User();
-        user1.setEmail("user1@example.com");
-        user1.setLogin("user1login");
-        user1.setBirthday(LocalDate.of(1990, 1, 1));
-        User createdUser1 = userController.create(user1);
-
-        User user2 = new User();
-        user2.setEmail("user2@example.com");
-        user2.setLogin("user2login");
-        user2.setBirthday(LocalDate.of(1995, 5, 15));
-        User createdUser2 = userController.create(user2);
-
-        // Ожидаем выброс NotFoundException с конкретным сообщением
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> userController.getMutualFriendList(
-                        createdUser1.getId(),
-                        createdUser2.getId()
-                )
-        );
-
-        assertTrue(exception.getMessage().contains("Друзья отсутствуют"));
-    }
-
 
     @Test
     void getMutualFriendList_WithMutualFriends_ShouldReturnMutualFriends() {
@@ -671,30 +644,6 @@ class FilmorateApplicationTests {
 
         assertNotNull(result);
         assertEquals(2, result.size());
-    }
-
-    @Test
-    void deleteFriend_NonExistentFriend_ShouldThrowNotFoundException() {
-        // Создаём двух пользователей без дружбы
-        User user = new User();
-        user.setEmail("user@example.com");
-        user.setLogin("userlogin");
-        user.setBirthday(LocalDate.of(1990, 1, 1));
-        User createdUser = userController.create(user);
-
-        User friend = new User();
-        friend.setEmail("friend@example.com");
-        friend.setLogin("friendlogin");
-        friend.setBirthday(LocalDate.of(1995, 5, 15));
-        User createdFriend = userController.create(friend);
-
-        // Пытаемся удалить друга, которого нет в списке
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> userController.deleteFriend(createdUser.getId(), createdFriend.getId())
-        );
-
-        assertTrue(exception.getMessage().contains("Пользователя с этим id нет в друзьях"));
     }
 
     @Test
