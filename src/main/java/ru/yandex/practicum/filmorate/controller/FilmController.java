@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import ru.yandex.practicum.filmorate.dto.FilmDto;
 import ru.yandex.practicum.filmorate.dao.mappers.FilmMapper;
@@ -14,7 +13,6 @@ import java.util.Collection;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/films")
-@RequiredArgsConstructor
 public class FilmController {
     private final FilmService filmService;
 
