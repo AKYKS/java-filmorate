@@ -1,96 +1,67 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.expection.ConditionsNotMetException;
-import ru.yandex.practicum.filmorate.expection.DuplicatedDataException;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
+import ru.yandex.practicum.filmorate.dto.UserDto;
 import ru.yandex.practicum.filmorate.expection.NotFoundException;
-import ru.yandex.practicum.filmorate.expection.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.service.UserService;
 
-import java.time.LocalDate;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
-@Slf4j
 @RestController
+@AllArgsConstructor
 @RequestMapping("/users")
 public class UserController {
-    private final Map<Long, User> users = new HashMap<>();
+
+    private final UserService userService;
+    private final UserMapper userMapper;
 
     @GetMapping
-    public Collection<User> findAll() {
-        return users.values();
+    public Collection<User> getAllUsers() {
+        return userService.getAllUsers();
+    }
+
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable("id") long id) {
+        return userService.getUserById(id);
     }
 
     @PostMapping
-    public User create(@RequestBody User user) {
-        // проверяем выполнение необходимых условий
-        checkUserData(user);
-        // формируем дополнительные данные
-        user.setId(getNextId());
-        // сохраняем новую публикацию в памяти приложения
-        users.put(user.getId(), user);
-        return user;
-    }
-
-    // вспомогательный метод для генерации идентификатора нового поста
-    private long getNextId() {
-        long currentMaxId = users.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    public User createUser(@Valid @RequestBody UserDto userDto) {
+        User user = UserMapper.mapToUser(userDto);
+        return userService.createUser(user);
     }
 
     @PutMapping
-    public User update(@RequestBody User newUser) {
-        // проверяем необходимые условия
-        if (newUser.getId() == null) {
-            throw new ConditionsNotMetException("Id должен быть указан");
-        }
-        if (users.values().stream()
-                .anyMatch(curUser -> curUser.getEmail().equals(newUser.getEmail()))) {
-            throw new DuplicatedDataException("Этот имейл уже используется");
-        }
-        if (users.containsKey(newUser.getId())) {
-            User oldUser = users.get(newUser.getId());
-            if (newUser.getName() != null) {
-                oldUser.setName(newUser.getName());
-            }
-            if (newUser.getLogin() != null) {
-                oldUser.setLogin(newUser.getLogin());
-            }
-            if (newUser.getEmail() != null) {
-                oldUser.setEmail(newUser.getEmail());
-            }
-            if (newUser.getBirthday() != null) {
-                oldUser.setBirthday(newUser.getBirthday());
-            }
-            // если публикация найдена и все условия соблюдены, обновляем её содержимое
-            return oldUser;
-        }
-        throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+    public User updateUser(@Valid @RequestBody UserDto userDto) {
+        User user = UserMapper.mapToUser(userDto);
+        return userService.updateUser(user);
     }
 
-    private void checkUserData(User user) {
-        if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
-            throw new ConditionsNotMetException("Электронная почта не может быть пустой и должна содержать символ \"@\"");
-        }
-        if (users.values().stream()
-                .anyMatch(curUser -> curUser.getEmail().equals(user.getEmail()))) {
-            throw new DuplicatedDataException("Этот имейл уже используется");
-        }
-        if (user.getLogin() == null || user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            throw new ConditionsNotMetException("Логин не может быть пустым и содержать пробелы");
-        }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-        }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            throw new ValidationException("Дата рождения не может быть в будущем.");
-        }
+    @PutMapping("/{id}/friends/{friendId}")
+    public User putFriends(@PathVariable("id") long id, @PathVariable("friendId") long friendId) {
+        return userService.makeFriendship(id, friendId);
     }
+
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public User deleteFriends(@PathVariable("id") long id, @PathVariable("friendId") long friendId) {
+        return userService.deleteFriendship(id, friendId);
+    }
+
+    @GetMapping("/{id}/friends")
+    public Collection<User> listFriends(@PathVariable("id") long id) {
+        if (userService.listOfFriends(id) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        return userService.listOfFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public Collection<User> commonFriends(@PathVariable("id") long id, @PathVariable("otherId") long otherId) {
+        return userService.listOfCommonFriends(id, otherId);
+    }
+
 }
