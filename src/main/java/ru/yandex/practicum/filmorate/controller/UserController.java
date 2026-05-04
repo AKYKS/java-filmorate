@@ -2,6 +2,7 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
 import ru.yandex.practicum.filmorate.dto.UserDto;
 import ru.yandex.practicum.filmorate.expection.NotFoundException;
@@ -12,7 +13,7 @@ import ru.yandex.practicum.filmorate.service.UserService;
 import java.util.Collection;
 
 @RestController
-@AllArgsConstructor
+@RequiredArgsConstructor
 @RequestMapping("/users")
 public class UserController {
 
