@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.expection.NotFoundException;
 import ru.yandex.practicum.filmorate.expection.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -15,8 +14,6 @@ import java.util.Map;
 @Slf4j
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
-
-    UserStorage userStorage;
 
     private final Map<Long, Film> films = new HashMap<>();
 
@@ -28,6 +25,20 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Collection<Film> getAllFilms() {
         return films.values();
+    }
+
+    @Override
+    public Film userLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);
+        film.getLikes().add(userId);
+        return film;
+    }
+
+    @Override
+    public Film deleteLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);
+        film.getLikes().remove(userId);
+        return film;
     }
 
     @Override
@@ -54,30 +65,6 @@ public class InMemoryFilmStorage implements FilmStorage {
             films.put(film.getId(), film);
             return film;
         } else throw new NotFoundException("Такого фильма нет в списке!");
-    }
-
-    public Film userLikesFilm(Long id, Long userId) {
-        Film film = getFilmById(id);
-        if (userStorage.getUserById(userId) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
-        if (film == null) {
-            throw new NotFoundException("Такого фильма нет в списке!");
-        }
-        film.getLikes().add(userId);
-        return film;
-    }
-
-    public Film deleteLikesFilm(Long id, Long userId) {
-        if (userStorage.getUserById(userId) == null) {
-            throw new NotFoundException("Такого юзера нет!");
-        }
-        Film film = getFilmById(id);
-        if (film == null) {
-            throw new NotFoundException("Такого фильма нет в списке!");
-        }
-        film.getLikes().remove(userId);
-        return film;
     }
 
     private Long getNextId() {

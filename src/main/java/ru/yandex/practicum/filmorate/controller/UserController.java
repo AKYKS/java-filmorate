@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import ru.yandex.practicum.filmorate.dao.mappers.UserMapper;
 import ru.yandex.practicum.filmorate.dto.UserDto;
-import ru.yandex.practicum.filmorate.expection.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.service.UserService;
@@ -17,7 +16,6 @@ import java.util.Collection;
 public class UserController {
 
     private final UserService userService;
-    private final UserMapper userMapper;
 
     @GetMapping
     public Collection<User> getAllUsers() {
@@ -53,9 +51,6 @@ public class UserController {
 
     @GetMapping("/{id}/friends")
     public Collection<User> listFriends(@PathVariable("id") long id) {
-        if (userService.listOfFriends(id) == null) {
-            throw new NotFoundException("Такого юзера нет в списке!");
-        }
         return userService.listOfFriends(id);
     }
 

@@ -13,14 +13,14 @@ import java.util.Set;
 
 @Data
 public class FilmDto {
-    Long id;
+    private Long id;
     @NotBlank(message = "Название не может быть пустым!")
-    String name;
+    private String name;
     @Size(max = 200, message = "Максимальная длина описания — 200 символов!")
-    String description;
-    LocalDate releaseDate;
+    private String description;
+    private LocalDate releaseDate;
     @Positive(message = "Продолжительность фильма должна быть положительным числом!")
-    int duration;
-    Set<Genre> genres = new HashSet<>();
-    Rating mpa;
+    private int duration;
+    private Set<Genre> genres = new HashSet<>();
+    private Rating mpa;
 }

@@ -8,6 +8,6 @@ import lombok.Data;
 @AllArgsConstructor
 @Builder
 public class Genre {
-    Long id;
-    String name;
+    private Long id;
+    private String name;
 }

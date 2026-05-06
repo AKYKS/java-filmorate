@@ -1,11 +1,12 @@
 package ru.yandex.practicum.filmorate;
 
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dao.GenreDbStorage;
 import ru.yandex.practicum.filmorate.dao.RatingDbStorage;
 import ru.yandex.practicum.filmorate.model.Genre;
@@ -15,12 +16,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Nested
-//@JdbcTest
-@SpringBootTest
+@JdbcTest
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Import({RatingDbStorage.class, GenreDbStorage.class})
 class FilmorateApplicationTests {
+
     private final RatingDbStorage ratingDbStorage;
     private final GenreDbStorage genreDbStorage;
 

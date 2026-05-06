@@ -8,6 +8,7 @@ import ru.yandex.practicum.filmorate.expection.NotFoundException;
 import ru.yandex.practicum.filmorate.expection.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -16,9 +17,12 @@ import java.util.*;
 public class FilmService {
 
     private final FilmStorage filmStorage;
+    private final UserStorage userStorage;
 
-    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       @Qualifier("userDbStorage") UserStorage userStorage) {
         this.filmStorage = filmStorage;
+        this.userStorage = userStorage;
     }
 
     public Film getFilmById(Long id) {
@@ -30,10 +34,25 @@ public class FilmService {
     }
 
     public Film userLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);
+        if (userStorage.getUserById(userId) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        if (film == null) {
+            throw new NotFoundException("Такого фильма нет в списке!");
+        }
+
         return filmStorage.userLikesFilm(id, userId);
     }
 
     public Film deleteLikesFilm(Long id, Long userId) {
+        if (userStorage.getUserById(userId) == null) {
+            throw new NotFoundException("Такого юзера нет!");
+        }
+        Film film = getFilmById(id);
+        if (film == null) {
+            throw new NotFoundException("Такого фильма нет в списке!");
+        }
         return filmStorage.deleteLikesFilm(id, userId);
     }
 
