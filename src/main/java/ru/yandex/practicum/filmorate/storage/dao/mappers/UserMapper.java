@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.dao.mappers;
+package ru.yandex.practicum.filmorate.storage.dao.mappers;
 
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dto.UserDto;

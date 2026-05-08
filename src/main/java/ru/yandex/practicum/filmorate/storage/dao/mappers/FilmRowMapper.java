@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.dao.mappers;
+package ru.yandex.practicum.filmorate.storage.dao.mappers;
 
 import lombok.AllArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,7 +10,10 @@ import ru.yandex.practicum.filmorate.model.Rating;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 @Component
 @AllArgsConstructor
