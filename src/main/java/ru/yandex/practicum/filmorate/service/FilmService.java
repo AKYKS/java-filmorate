@@ -1,121 +1,88 @@
 package ru.yandex.practicum.filmorate.service;
 
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.expection.ConditionsNotMetException;
-import ru.yandex.practicum.filmorate.expection.DuplicatedDataException;
 import ru.yandex.practicum.filmorate.expection.NotFoundException;
 import ru.yandex.practicum.filmorate.expection.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class FilmService {
-    private static final Logger log = LoggerFactory.getLogger(FilmService.class);
-    private final InMemoryFilmStorage inMemoryFilmStorage;
-    private final UserService userService;
 
-    public Collection<Film> findAll() {
-        return inMemoryFilmStorage.findAll();
+    private final FilmStorage filmStorage;
+    private final UserStorage userStorage;
+
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       @Qualifier("userDbStorage") UserStorage userStorage) {
+        this.filmStorage = filmStorage;
+        this.userStorage = userStorage;
     }
 
-    public Film findCurrentFilm(long id) {
-        return inMemoryFilmStorage.findCurrentFilm(id);
-    }
-
-    public Film create(Film film) {
-        checkFilmData(film);
-        return inMemoryFilmStorage.create(film);
-    }
-
-    public Film update(Film newFilm) {
-        // проверяем необходимые условия
-        if (newFilm.getId() == null) {
-            throw new ConditionsNotMetException("Id должен быть указан");
+    public Film getFilmById(Long id) {
+        try {
+            return filmStorage.getFilmById(id);
+        } catch (EmptyResultDataAccessException e) {
+            throw new NotFoundException("Такого фильма нет в списке!");
         }
-        if (findCurrentFilm(newFilm.getId()) != null) {
-            return inMemoryFilmStorage.update(newFilm);
-        }
-
-        throw new NotFoundException("Фильм с id = " + newFilm.getId() + " не найден");
     }
 
-    public Film addLikeFilm(long id, long userId) {
-        userService.isPresentUser(userId);
-        isPresentFilm(id);
-
-        Film curFilm = inMemoryFilmStorage.findCurrentFilm(id);
-        Set<Long> curFilmLikes = curFilm.getUserLikes();
-
-        if (curFilmLikes != null) {
-            if (isCurUserLikedFilm(id, userId)) {
-                throw new DuplicatedDataException("Вы уже лайкали этот фильм!");
-            }
-        } else {
-            curFilmLikes = new HashSet<>();
+    public Film userLikesFilm(Long id, Long userId) {
+        Film film = getFilmById(id);
+        if (userStorage.getUserById(userId) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        if (film == null) {
+            throw new NotFoundException("Такого фильма нет в списке!");
         }
 
-        curFilmLikes.add(userId);
-        curFilm.setUserLikes(curFilmLikes);
-
-        return curFilm;
+        return filmStorage.userLikesFilm(id, userId);
     }
 
-    public Film deleteLikeFilm(long id, long userId) {
-        userService.isPresentUser(userId);
-        isPresentFilm(id);
-
-        Film curFilm = inMemoryFilmStorage.findCurrentFilm(id);
-        Set<Long> curFilmLikes = curFilm.getUserLikes();
-
-        if (curFilmLikes != null) {
-            if (!isCurUserLikedFilm(id, userId)) {
-                throw new NotFoundException("Вы и так не лайкали этот фильм");
-            }
-        } else {
-            throw new NotFoundException("Вы и так не лайкали этот фильм");
+    public Film deleteLikesFilm(Long id, Long userId) {
+        if (userStorage.getUserById(userId) == null) {
+            throw new NotFoundException("Такого юзера нет!");
         }
-
-        curFilmLikes.remove(userId);
-        curFilm.setUserLikes(curFilmLikes);
-
-        return curFilm;
+        Film film = getFilmById(id);
+        if (film == null) {
+            throw new NotFoundException("Такого фильма нет в списке!");
+        }
+        return filmStorage.deleteLikesFilm(id, userId);
     }
 
-    public Collection<Film> listOfPopularFilms(long count) {
-        return inMemoryFilmStorage.findAll().stream()
-                .filter(film -> film.getUserLikes() != null)
-                .sorted((f1, f2) -> Integer.compare(
-                        f2.getUserLikes().size(),
-                        f1.getUserLikes().size()
-                ))
+    public Collection<Film> listFirstCountFilm(int count) {
+        Collection<Film> films;
+        films = sortingToDown().stream()
                 .limit(count)
-                .collect(Collectors.toList());
+                .toList();
+        return films;
     }
 
-    public void clear() {
-        inMemoryFilmStorage.clear();
+    public List<Film> sortingToDown() {
+        ArrayList<Film> listFilms = new ArrayList<>(filmStorage.getAllFilms());
+        listFilms.sort((Film film1, Film film2) ->
+                Integer.compare(film2.getLikes().size(), film1.getLikes().size())
+        );
+        return listFilms;
     }
 
-    private void isPresentFilm(long id) {
-        if (inMemoryFilmStorage.findCurrentFilm(id) == null) {
-            log.warn("Фильм с таким id {} не найден", id);
-            throw new NotFoundException("Фильм с таким id не найден");
-        }
+    public Collection<Film> getAllFilms() {
+        return filmStorage.getAllFilms();
     }
 
-    private boolean isCurUserLikedFilm(long id, long userId) {
-        if (inMemoryFilmStorage.findCurrentFilm(id).getUserLikes().contains(userId)) {
-            return true;
-        }
-        return false;
+    public Film createFilm(Film film) {
+        checkFilmData(film);
+        return filmStorage.createFilm(film);
+    }
+
+    public Film updateFilm(Film film) {
+        return filmStorage.updateFilm(film);
     }
 
     private void checkFilmData(Film film) {

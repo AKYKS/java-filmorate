@@ -1,15 +1,10 @@
 package ru.yandex.practicum.filmorate.service;
 
-import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.expection.ConditionsNotMetException;
-import ru.yandex.practicum.filmorate.expection.DuplicatedDataException;
-import ru.yandex.practicum.filmorate.expection.NotFoundException;
-import ru.yandex.practicum.filmorate.expection.ValidationException;
+import ru.yandex.practicum.filmorate.expection.*;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -17,156 +12,77 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
-    private static final Logger log = LoggerFactory.getLogger(UserService.class);
-    private final InMemoryUserStorage inMemoryUserStorage;
+    private final UserStorage userStorage;
 
-    public Collection<User> findAll() {
-        return inMemoryUserStorage.findAll();
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage) {
+        this.userStorage = userStorage;
     }
 
-    public User findCurrentUser(long id) {
-        return inMemoryUserStorage.findCurrentUser(id);
+    public User getUserById(Long id) {
+        if (userStorage.getUserById(id) == null) {
+            throw new DatabaseException("Такого юзера нет в списке!");
+        }
+        return userStorage.getUserById(id);
     }
 
-    public User create(User user) {
-        // проверяем выполнение необходимых условий
+    public User makeFriendship(long id, long friendId) {
+        if (userStorage.getUserById(id) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        if (userStorage.getUserById(friendId) == null) {
+            throw new NotFoundException("Невозможно добавить в друзья несуществующего юзера!");
+        }
+        userStorage.createFriendship(id, friendId);
+        return userStorage.getUserById(id);
+    }
+
+    public User deleteFriendship(long id, long friendId) {
+        if (userStorage.getUserById(id) == null) {
+            throw new NotFoundException("Такого юзера нет в списке!");
+        }
+        if (userStorage.getUserById(friendId) == null) {
+            throw new NotFoundException("Удаляемого из друзья юзера нет в списке!");
+        }
+        userStorage.deleteFriendship(id, friendId);
+        return userStorage.getUserById(id);
+    }
+
+    public Collection<User> listOfFriends(long id) {
+        if (userStorage.getUserById(id) == null) {
+            throw new DatabaseException("Такого юзера нет в списке!");
+        }
+        if (userStorage.getUserById(id).getFriends() == null) {
+            throw new DatabaseException("Список друзей пуст!");
+        }
+        return userStorage.listOfFriends(id);
+    }
+
+    public Collection<User> listOfCommonFriends(Long id, Long otherId) {
+        if (userStorage.getUserById(id) == null || userStorage.getUserById(otherId) == null) {
+            throw new NotFoundException("Одного из юзеров нет в списке!");
+        }
+        if (userStorage.getUserById(id).getFriends() == null || userStorage.getUserById(otherId).getFriends() == null) {
+            throw new NotFoundException("Один из списков друзей пуст!");
+        }
+        return userStorage.listOfCommonFriends(id, otherId);
+    }
+
+    public Collection<User> getAllUsers() {
+        return userStorage.getAllUsers();
+    }
+
+    public User createUser(User user) {
         checkUserData(user);
-        return inMemoryUserStorage.create(user);
+        return userStorage.createUser(user);
     }
 
-    public User update(User newUser) {
-        // проверяем необходимые условия
-        if (newUser.getId() == null) {
-            throw new ConditionsNotMetException("Id должен быть указан");
-        }
-        if (inMemoryUserStorage.findCurrentUser(newUser.getId()) != null) {
-            return inMemoryUserStorage.update(newUser);
-        }
-        throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
-    }
-
-    public Collection<User> addFriend(long userId, long id) {
-        isPresentUser(userId);
-        isPresentUser(id);
-
-        User user = inMemoryUserStorage.findCurrentUser(userId);
-        Set<Long> userFriends = user.getFriends();
-
-        User anotherUser = inMemoryUserStorage.findCurrentUser(id);
-        Set<Long> anotherUserFriends = anotherUser.getFriends();
-
-        if (userFriends != null) {
-            if (userFriends.contains(id)) {
-                throw new DuplicatedDataException("Пользователь с этим id уже у вас в друзьях");
-            }
-        } else {
-            userFriends = new HashSet<>();
-        }
-        if (anotherUserFriends == null) {
-            anotherUserFriends = new HashSet<>();
-        }
-        userFriends.add(id);
-        user.setFriends(userFriends);
-
-        anotherUserFriends.add(userId);
-        anotherUser.setFriends(anotherUserFriends);
-
-        List<User> result = new ArrayList<>();
-
-        result.add(user);
-        result.add(anotherUser);
-
-        log.info("Друг успешно добавлен!: {}", id);
-        return result;
-    }
-
-    public Collection<User> deleteFriend(long userId, long id) {
-        isPresentUser(userId);
-        isPresentUser(id);
-
-        User user = inMemoryUserStorage.findCurrentUser(userId);
-        Set<Long> userFriends = user.getFriends();
-
-        User anotherUser = inMemoryUserStorage.findCurrentUser(id);
-        Set<Long> anotherUserFriends = anotherUser.getFriends();
-
-        if (userFriends == null) {
-            userFriends = new HashSet<>();
-            if (anotherUserFriends == null) {
-                anotherUserFriends = new HashSet<>();
-            }
-        }
-
-        userFriends.remove(id);
-        user.setFriends(userFriends);
-
-        anotherUserFriends.remove(userId);
-        anotherUser.setFriends(anotherUserFriends);
-
-        List<User> result = new ArrayList<>();
-
-        result.add(user);
-        result.add(anotherUser);
-
-        return result;
-    }
-
-    public List<User> getFriendList(long userId) {
-        isPresentUser(userId);
-
-        User user = inMemoryUserStorage.findCurrentUser(userId);
-        Set<Long> userFriends = user.getFriends();
-
-        if (userFriends == null) {
-            userFriends = new HashSet<>();
-        }
-        ;
-
-        return friendIdtoList(userFriends);
-    }
-
-    public Collection<User> getMutualFriendList(long userId, long id) {
-        isPresentUser(userId);
-        isPresentUser(id);
-
-        User user = inMemoryUserStorage.findCurrentUser(userId);
-        User otherUser = inMemoryUserStorage.findCurrentUser(id);
-
-        Collection<User> commonFriends = user.getFriends().stream()
-                .filter(otherUser.getFriends()::contains)
-                .map(inMemoryUserStorage::findCurrentUser)
-                .toList();
-        return commonFriends;
-    }
-
-    public void clear() {
-        inMemoryUserStorage.clear();
-    }
-
-    public void isPresentUser(long id) {
-        if (inMemoryUserStorage.findCurrentUser(id) == null) {
-            log.warn("Пользователь с таким id {} не найден", id);
-            throw new NotFoundException("Пользователь с таким id не найден");
-        }
-    }
-
-    private void isPresentUserFriends(Set<Long> userFriends) {
-        if (userFriends == null) {
-            throw new NotFoundException("Друзья отсутствуют");
-        }
-    }
-
-    private List<User> friendIdtoList(Set<Long> friendsId) {
-        return friendsId.stream()
-                .map(friendId -> inMemoryUserStorage.findCurrentUser(friendId))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+    public User updateUser(User user) {
+        return userStorage.updateUser(user);
     }
 
     private void checkUserData(User user) {
-        final Map<Long, User> users = inMemoryUserStorage.findAll().stream()
+        final Map<Long, User> users = userStorage.getAllUsers().stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
         if (user.getEmail() == null || user.getEmail().isBlank() || !user.getEmail().contains("@")) {
